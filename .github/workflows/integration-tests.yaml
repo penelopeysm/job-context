@@ -1,0 +1,221 @@
+---
+name: Integration Tests
+on:
+  pull_request:
+    paths:
+      - "action.yaml"
+      - ".github/workflows/integration-tests.yaml"
+
+jobs:
+  test-default-name:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: job
+      - name: Test job name
+        run: '[[ "${output}" == "${expected}" ]] || exit 1'
+        env:
+          output: ${{ steps.job.outputs.name }}
+          expected: test-default-name  # ${{ github.job }}
+      - name: Test job ID
+        run: |
+          [[ "${job_id}" =~ ^[0-9]+$ ]] || exit 1
+        env:
+          job_id: ${{ steps.job.outputs.id }}
+
+  test-custom-name:
+    name: Custom Name
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: job
+      - name: Test job name
+        run: '[[ "${output}" == "${expected}" ]] || exit 1'
+        env:
+          output: ${{ steps.job.outputs.name }}
+          expected: Custom Name
+      - name: Test job ID
+        run: |
+          [[ "${job_id}" =~ ^[0-9]+$ ]] || exit 1
+        env:
+          job_id: ${{ steps.job.outputs.id }}
+
+  test-empty-name:
+    name: ""
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: job
+      - name: Test job name
+        run: '[[ "${output}" == "${expected}" ]] || exit 1'
+        env:
+          output: ${{ steps.job.outputs.name }}
+          expected: test-empty-name  # ${{ github.job }}
+      - name: Test job ID
+        run: |
+          [[ "${job_id}" =~ ^[0-9]+$ ]] || exit 1
+        env:
+          job_id: ${{ steps.job.outputs.id }}
+
+  test-null-name:
+    name: null
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: job
+      - name: Test job name
+        run: '[[ "${output}" == "${expected}" ]] || exit 1'
+        env:
+          output: ${{ steps.job.outputs.name }}
+          expected: test-null-name  # ${{ github.job }}
+      - name: Test job ID
+        run: |
+          [[ "${job_id}" =~ ^[0-9]+$ ]] || exit 1
+        env:
+          job_id: ${{ steps.job.outputs.id }}
+
+  test-false-name:
+    name: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: job
+      - name: Test job name
+        run: '[[ "${output}" == "${expected}" ]] || exit 1'
+        env:
+          output: ${{ steps.job.outputs.name }}
+          expected: false  # ${{ github.job }}
+      - name: Test job ID
+        run: |
+          [[ "${job_id}" =~ ^[0-9]+$ ]] || exit 1
+        env:
+          job_id: ${{ steps.job.outputs.id }}
+
+  test-matrix:
+    name: Matrix
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        build:
+          - name: App One
+            repo: user/app1
+          - name: App Two
+            repo: user/app2
+        version:
+          - "1.0"
+          - "2.0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: job
+      - name: Test job name
+        run: '[[ "${output}" == "${expected}" ]] || exit 1'
+        env:
+          output: ${{ steps.job.outputs.name }}
+          expected: Matrix (${{ matrix.build.name }}, ${{ matrix.build.repo }}, ${{ matrix.version }})
+      - name: Test job ID
+        run: |
+          [[ "${job_id}" =~ ^[0-9]+$ ]] || exit 1
+        env:
+          job_id: ${{ steps.job.outputs.id }}
+      - name: Test job name is distinct
+        run: |
+          jobs="$(gh api -X GET "/repos/{owner}/{repo}/actions/runs/${run_id:?}/attempts/${run_attempt:?}/jobs")"
+          if [[ $(jq --arg name "$job_name" '.jobs | map(select(.name == $name)) | length' <<<"${jobs}") -ne 1 ]]; then
+              jq '.jobs[].name' <<<"${jobs}"
+              exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          run_id: ${{ github.run_id }}
+          run_attempt: ${{ github.run_attempt }}
+          job_name: ${{ steps.job.outputs.name }}
+
+  test-matrix-expr:
+    name: Matrix Expression - ${{ github.event_name }} - ${{ matrix.dne }} - ${{ matrix.index }} - ${{ strategy.job-index }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        index:
+          - 1
+          - 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: job
+      - name: Test job name
+        run: '[[ "${output}" == "${expected}" ]] || exit 1'
+        env:
+          output: ${{ steps.job.outputs.name }}
+          expected: Matrix Expression - ${{ github.event_name }} -  - ${{ matrix.index }} - ${{ strategy.job-index }}
+      - name: Test job ID
+        run: |
+          [[ "${job_id}" =~ ^[0-9]+$ ]] || exit 1
+        env:
+          job_id: ${{ steps.job.outputs.id }}
+      - name: Test job name is distinct
+        run: |
+          jobs="$(gh api -X GET "/repos/{owner}/{repo}/actions/runs/${run_id:?}/attempts/${run_attempt:?}/jobs")"
+          if [[ $(jq --arg name "$job_name" '.jobs | map(select(.name == $name)) | length' <<<"${jobs}") -ne 1 ]]; then
+              jq '.jobs[].name' <<<"${jobs}"
+              exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          run_id: ${{ github.run_id }}
+          run_attempt: ${{ github.run_attempt }}
+          job_name: ${{ steps.job.outputs.name }}
+
+  test-ambiguous:
+    # Using `github.job` with any other expressions present results in it being empty
+    name: ${{ github.job }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        index:
+          - 1
+          - 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: job
+        continue-on-error: true
+      - name: Action failed
+        if: ${{ steps.job.outcome != 'failure' }}
+        run: exit 1
+      - name: Test job name
+        run: '[[ "${output}" == "${expected}" ]] || exit 1'
+        env:
+          output: ${{ steps.job.outputs.name }}
+          expected: test-ambiguous
+      - name: Test job ID empty
+        run: |
+          [[ -z "${job_id}" ]] || exit 1
+        env:
+          job_id: ${{ steps.job.outputs.id }}
