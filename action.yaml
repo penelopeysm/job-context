@@ -1,6 +1,6 @@
 ---
 name: Job Context
-description:
+description: Provides additional context for the currently running job
 inputs:
   path:
     description: >-
