@@ -35,11 +35,7 @@ jobs:
 
 ## Inputs
 
-The `job-context` action supports the following inputs:
-
-| Name             | Description | Required | Example |
-|:-----------------|:------------|:---------|:--------|
-| `path`           | The path to the cloned repo containing the workflow. Should only be needed by other GHAs using this action. | No | <pre><code>${{ github.action_path }}/repo</code></pre> |
+The `job-context` action does not support any inputs.
 
 ## Outputs
 

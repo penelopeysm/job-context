@@ -219,3 +219,26 @@ jobs:
           [[ -z "${job_id}" ]] || exit 1
         env:
           job_id: ${{ steps.job.outputs.id }}
+
+  # Using `job-context` within another action requires the path to be set correct to be able to
+  # clone the workflow repository.
+  test-embedded:
+    name: Embedded
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - id: dynamic-job
+        uses: jenseng/dynamic-uses@02f544690a931f3967153cd5f14679cfeb61f830 # v1
+        with:
+          uses: beacon-biosignals/job-context@${{ github.event.pull_request.head.sha || github.sha }}  # Always use HEAD commit
+      - name: Test job name
+        run: '[[ "${output}" == "${expected}" ]] || exit 1'
+        env:
+          output: ${{ fromJSON(steps.dynamic-job.outputs.outputs).name }}
+          expected: Embedded
+      - name: Test job ID
+        run: |
+          [[ "${job_id}" =~ ^[0-9]+$ ]] || exit 1
+        env:
+          job_id: ${{ fromJSON(steps.dynamic-job.outputs.outputs).id }}

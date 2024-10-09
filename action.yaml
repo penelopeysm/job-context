@@ -4,14 +4,6 @@ description: Provides additional context for the currently running job
 branding:
   icon: box
   color: black
-inputs:
-  path:
-    description: >-
-      The path to the cloned repo containing the workflow. Should only be needed by other
-      GHAs using this action.
-    type: string
-    default: ""
-    required: false
 outputs:
   name:
     description: The rendered job name.
@@ -24,12 +16,13 @@ outputs:
 runs:
   using: composite
   steps:
-    # In order to determine the job name we'll extract the non-rendered job name from the
-    # workflow and then evaulate any expressions contained within.
+    # In order to determine the job name we'll extract the non-rendered job name from the workflow and then evaulate
+    # any expressions contained within. Using `action/checkout` requires that we set the path under `$GITHUB_WORSPACE`.
     - uses: actions/checkout@v4
+      id: checkout
       with:
         ref: ${{ github.workflow_sha }}
-        path: ${{ inputs.path || format('{0}/repo', github.action_path) }}
+        path: ${{ format('{0}/.job-context-repo', github.workspace) }}
     - id: workflow
       shell: bash
       run: |
@@ -42,7 +35,7 @@ runs:
         job_name_template="$(job_key="${job_key}" yq '.jobs[env(job_key)] | select(has("name")).name | select(. != null)' "${repo_path}/${workflow_path:?}")"
         echo "name-template=${job_name_template}" | tee -a "$GITHUB_OUTPUT"
       env:
-        repo_path: ${{ inputs.path || format('{0}/repo', github.action_path) }}
+        repo_path: ${{ format('{0}/.job-context-repo', github.workspace) }}
         workflow_ref: ${{ github.workflow_ref }}
         job_key: ${{ github.job }}  # User supplied job key cannot be allowed as we cannot properly render `matrix` expressions later
     - id: render
@@ -105,6 +98,13 @@ runs:
         fi
       env:
         GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
         run_id: ${{ github.run_id }}
         run_attempt: ${{ github.run_attempt }}
         job_name: ${{ steps.render.outputs.name }}
+    - name: Cleanup
+      if: ${{ always() && steps.checkout.output == 'success' }}
+      shell: bash
+      run: rm -rf "${repo_path:?}"
+      env:
+        repo_path: ${{ format('{0}/.job-context-repo', github.workspace) }}
