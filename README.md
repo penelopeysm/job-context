@@ -18,7 +18,8 @@ jobs:
     # These permissions are needed to:
     # - Use `job-context`: https://github.com/beacon-biosignals/job-context#permissions
     permissions:
-      context: read
+      actions: read
+      contents: read
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -46,9 +47,10 @@ The `job-context` action does not support any inputs.
 
 ## Permissions
 
-The follow [job permissions](https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs) are required to run this action:
+The following [job permissions](https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs) are required to run this action:
 
 ```yaml
 permissions:
-  context: read
+  actions: read  # Required for non-public repositories
+  contents: read
 ```

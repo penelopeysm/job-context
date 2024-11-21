@@ -10,6 +10,7 @@ jobs:
   test-default-name:
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +31,7 @@ jobs:
     name: Custom Name
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
     steps:
       - uses: actions/checkout@v4
@@ -50,6 +52,7 @@ jobs:
     name: ""
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +73,7 @@ jobs:
     name: null
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
     steps:
       - uses: actions/checkout@v4
@@ -90,6 +94,7 @@ jobs:
     name: false
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
     steps:
       - uses: actions/checkout@v4
@@ -194,6 +199,7 @@ jobs:
     name: ${{ github.job }}
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
     strategy:
       fail-fast: false
@@ -226,6 +232,7 @@ jobs:
     name: Embedded
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
     steps:
       - id: dynamic-job
